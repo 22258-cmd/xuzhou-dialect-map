@@ -1,0 +1,20 @@
+﻿# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 日志与临时文件
+*.log
+npm-debug.log*
+.edge.log
+
+# 本地临时目录（截图/中间产物）
+.edgetmp/
+.edgetmp2/
+.old1/
+.n1/
+
+# 构建产物
+dist/
+build/

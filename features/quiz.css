@@ -1,0 +1,273 @@
+/* ============================================================
+   features/quiz.css — 方言小游戏 stage（深色沙盘体系）
+   ============================================================ */
+
+.stage {
+  position: fixed; inset: 0; z-index: 80;
+  display: none;
+  overflow-y: auto;
+  padding: 24px 18px 40px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(232,181,75,.07), transparent 52%),
+    rgba(4, 8, 10, .93);
+  backdrop-filter: blur(18px) saturate(.9);
+  -webkit-backdrop-filter: blur(18px) saturate(.9);
+}
+.stage.on { display: flex; align-items: flex-start; justify-content: center; }
+.stage::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(115% 80% at 50% 45%, transparent 40%, rgba(2,5,7,.72) 100%);
+}
+
+.stage-inner {
+  position: relative; z-index: 2;
+  width: min(540px, 100%);
+  margin: auto;
+  background: linear-gradient(170deg, rgba(16,26,30,.96), rgba(8,14,17,.98));
+  border: 1px solid rgba(232,181,75,.26);
+  border-radius: 20px;
+  box-shadow: 0 40px 100px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.05);
+  padding: 22px 24px 26px;
+  animation: stageIn .38s cubic-bezier(.22,1,.36,1);
+}
+@keyframes stageIn {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+}
+
+/* ---------- 头 ---------- */
+.q-head { display: flex; align-items: center; gap: 12px; }
+.q-close {
+  width: 30px; height: 30px; flex: none;
+  border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #b9b0a0; font-size: 14px; line-height: 1;
+  transition: all .2s;
+}
+.q-close:hover { background: #de5b48; border-color: #de5b48; color: #fff; transform: rotate(90deg); }
+.q-head-txt { flex: 1; min-width: 0; }
+.q-head-txt b {
+  display: block; font-family: var(--serif);
+  font-size: 16px; letter-spacing: 1.2px; color: #f2ebdd;
+}
+.q-head-txt span {
+  display: block; font-size: 10.5px; letter-spacing: 1.2px;
+  color: #8f8678; margin-top: 3px;
+}
+.q-head-val {
+  flex: none; text-align: right;
+  font-family: var(--serif); font-size: 19px; color: var(--gold);
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.q-head-val small {
+  display: block; font-family: var(--sans); font-size: 9px;
+  letter-spacing: 1.4px; color: #7f7668; margin-top: 2px;
+}
+
+/* ---------- 进度点 ---------- */
+.q-dots { display: flex; gap: 5px; margin: 16px 0 20px; }
+.q-dots i {
+  flex: 1; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,.10);
+  transition: background .3s, box-shadow .3s;
+}
+.q-dots i.ok { background: var(--jade, #4fc3a1); box-shadow: 0 0 8px rgba(79,195,161,.55); }
+.q-dots i.no { background: #de5b48; }
+.q-dots i.now { background: var(--gold); box-shadow: 0 0 8px rgba(232,181,75,.5); }
+
+/* ---------- 题面 ---------- */
+.q-body { text-align: center; padding: 4px 0 6px; }
+.q-tags { display: flex; justify-content: center; gap: 8px; margin-bottom: 6px; }
+.q-tags span {
+  font-size: 10px; letter-spacing: 1.4px; padding: 3px 9px;
+  border-radius: 999px; color: #b9b0a0;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.09);
+}
+.q-tags .q-diff { color: var(--gold); border-color: rgba(232,181,75,.28); }
+
+.q-word {
+  font-family: var(--serif);
+  font-size: 62px; line-height: 1.18; letter-spacing: 6px;
+  color: #f8f1e4; margin: 8px 0 2px;
+  text-shadow: 0 0 44px rgba(232,181,75,.26);
+}
+.q-py { font-size: 12px; letter-spacing: 3px; color: #9c8f7a; margin-bottom: 14px; }
+
+.q-play {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px 9px; border-radius: 999px; cursor: pointer;
+  background: rgba(232,181,75,.09);
+  border: 1px solid rgba(232,181,75,.32);
+  color: var(--gold); font-size: 12px; letter-spacing: 1px;
+  font-family: var(--sans);
+  transition: all .2s;
+}
+.q-play:hover { background: rgba(232,181,75,.18); box-shadow: 0 0 22px rgba(232,181,75,.18); }
+.q-play.on { animation: playPulse .9s ease; }
+@keyframes playPulse {
+  0% { box-shadow: 0 0 0 0 rgba(232,181,75,.4); }
+  100% { box-shadow: 0 0 0 16px rgba(232,181,75,0); }
+}
+.q-play svg { width: 13px; height: 13px; fill: currentColor; }
+
+.q-ask {
+  margin-top: 15px; font-size: 11.5px; letter-spacing: 1.6px;
+  color: #857c6e;
+}
+
+/* ---------- 选项 ---------- */
+.q-opts { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+.q-opt {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; text-align: left;
+  padding: 13px 15px;
+  background: rgba(255,255,255,.032);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 11px;
+  color: #e6ddcd; font-size: 13.5px; letter-spacing: .4px;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .18s;
+}
+.q-opt:hover:not(:disabled) {
+  background: rgba(232,181,75,.09);
+  border-color: rgba(232,181,75,.44);
+  transform: translateX(3px);
+}
+.q-k {
+  width: 23px; height: 23px; flex: none; border-radius: 6px;
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 11px;
+  border: 1px solid rgba(232,181,75,.28); color: #a8823a;
+}
+.q-t { flex: 1; }
+.q-mk { font-size: 14px; width: 16px; text-align: right; }
+.q-opt.ok { background: rgba(79,195,161,.13); border-color: #4fc3a1; color: #dff5ee; }
+.q-opt.ok .q-k { background: #4fc3a1; color: #04120d; border-color: #4fc3a1; }
+.q-opt.no { background: rgba(222,91,72,.13); border-color: #de5b48; color: #ffe6e1; }
+.q-opt.no .q-k { background: #de5b48; color: #150603; border-color: #de5b48; }
+.q-opt.dim { opacity: .38; }
+.q-opt:disabled { cursor: default; }
+
+/* ---------- 揭示 ---------- */
+.q-reveal { display: none; margin-top: 14px; }
+.q-reveal.on { display: block; animation: stageIn .3s; }
+.q-rv {
+  padding: 13px 15px 14px;
+  background: linear-gradient(135deg, rgba(232,181,75,.10), rgba(232,181,75,.02));
+  border-left: 2px solid var(--gold);
+  border-radius: 0 9px 9px 0;
+}
+.q-rv.bad {
+  background: linear-gradient(135deg, rgba(222,91,72,.10), rgba(222,91,72,.02));
+  border-left-color: #de5b48;
+}
+.q-rv-h { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.q-rv-h b { font-family: var(--serif); font-size: 20px; color: var(--gold); letter-spacing: 1px; }
+.q-rv.bad .q-rv-h b { color: #de5b48; }
+.q-rv-h i { font-style: normal; font-size: 10.5px; letter-spacing: 1.4px; color: #8f8678; }
+.q-rv-h .ok, .q-rv-h .no { margin-left: auto; font-size: 11px; letter-spacing: .8px; }
+.q-rv-h .ok { color: #4fc3a1; }
+.q-rv-h .no { color: #de5b48; }
+.q-rv-m { margin-top: 7px; font-size: 13px; color: #d8d0c0; }
+.q-rv-m em {
+  font-style: normal; font-size: 9.5px; letter-spacing: 2px;
+  color: #857c6e; margin-right: 8px;
+}
+.q-rv-e {
+  margin-top: 7px; padding-left: 10px;
+  border-left: 1px solid rgba(255,255,255,.13);
+  font-size: 12px; color: #9c9384; line-height: 1.7;
+}
+
+/* ---------- 底部 ---------- */
+.q-foot { margin-top: 16px; }
+.q-next {
+  width: 100%; padding: 13px;
+  background: linear-gradient(160deg, #f0c766, #cf9a30);
+  border: 0; border-radius: 11px;
+  color: #180f02; font-size: 14px; font-weight: 700; letter-spacing: 2px;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .2s;
+}
+.q-next:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(232,181,75,.3); }
+
+/* ---------- 结算 ---------- */
+.q-result { text-align: center; padding: 34px 24px 28px; }
+.qr-eyebrow { font-size: 10px; letter-spacing: 3px; color: #857c6e; }
+.qr-stars { margin: 14px 0 4px; font-size: 26px; letter-spacing: 8px; color: var(--gold); }
+.qr-stars i { font-style: normal; color: rgba(255,255,255,.16); }
+.qr-num {
+  font-family: var(--serif); font-size: 64px; line-height: 1; color: var(--gold);
+  text-shadow: 0 0 60px rgba(232,181,75,.4); margin: 10px 0 2px;
+}
+.qr-num span { font-size: 24px; opacity: .45; margin-left: 4px; }
+.qr-tier {
+  font-family: var(--serif); font-size: 21px; letter-spacing: 3px;
+  color: #f8f1e4; margin-top: 14px;
+}
+.qr-stats {
+  display: flex; gap: 10px; margin: 22px 0 6px;
+}
+.qr-stats > div {
+  flex: 1; padding: 12px 6px 10px;
+  background: rgba(255,255,255,.032);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+}
+.qr-stats b {
+  display: block; font-family: var(--serif); font-size: 19px;
+  color: var(--gold); font-variant-numeric: tabular-nums;
+}
+.qr-stats span { display: block; font-size: 9.5px; letter-spacing: 1.4px; color: #857c6e; margin-top: 4px; }
+.qr-badge {
+  margin-top: 14px; padding: 9px 14px; border-radius: 8px;
+  font-size: 11.5px; letter-spacing: .8px;
+  background: rgba(79,195,161,.10);
+  border: 1px solid rgba(79,195,161,.32);
+  color: #7fd9c0;
+}
+.qr-badge.dim {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.10);
+  color: #8f8678;
+}
+.qr-acts { display: flex; gap: 10px; margin-top: 20px; }
+.q-btn {
+  flex: 1; padding: 12px; border-radius: 10px; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; letter-spacing: 1.2px;
+  transition: all .2s;
+}
+.q-btn.ghost {
+  background: transparent; border: 1px solid rgba(255,255,255,.14); color: #b9b0a0;
+}
+.q-btn.ghost:hover { border-color: rgba(232,181,75,.5); color: var(--gold); }
+.q-btn.primary {
+  background: linear-gradient(160deg, #f0c766, #cf9a30);
+  border: 0; color: #180f02; font-weight: 700;
+}
+.q-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(232,181,75,.28); }
+
+/* ---------- 飘分 ---------- */
+.q-float {
+  position: fixed; z-index: 90;
+  font-family: var(--serif); font-size: 17px; font-weight: 700;
+  color: var(--gold); pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8);
+  animation: floatUp 1s cubic-bezier(.2,.8,.3,1) forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(4px) scale(.9); }
+  25% { opacity: 1; transform: translateY(-6px) scale(1.05); }
+  100% { opacity: 0; transform: translateY(-46px) scale(1); }
+}
+
+/* ---------- 窄屏 ---------- */
+@media (max-width: 560px) {
+  .stage { padding: 12px 12px 28px; }
+  .stage-inner { padding: 18px 16px 20px; border-radius: 16px; }
+  .q-word { font-size: 50px; }
+  .q-head-txt b { font-size: 14px; }
+  .qr-num { font-size: 52px; }
+  .qr-stats b { font-size: 16px; }
+}
