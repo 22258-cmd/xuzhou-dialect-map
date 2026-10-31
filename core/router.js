@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  var handlers = {};        // { home, district, spot, word, quiz, book }
+  var handlers = {};        // { home, district, spot, word, quiz, scene, book }
   var pending = null;       // 一次性附加参数（如 fly）
   var last = { name: 'home', param: null };
   var lastStageReturn = '#/';
@@ -27,6 +27,7 @@
     if (k === 's') return { name: 'spot', param: v };
     if (k === 'w') return { name: 'word', param: v };
     if (k === 'quiz') return { name: 'quiz', param: v };
+    if (k === 'scene') return { name: 'scene', param: v };
     if (k === 'book') return { name: 'book', param: null };
     return { name: 'home', param: null };
   }
@@ -36,6 +37,7 @@
     if (name === 'spot') return '#/s/' + param;
     if (name === 'word') return '#/w/' + param;
     if (name === 'quiz') return '#/quiz/' + param;
+    if (name === 'scene') return '#/scene/' + param;
     if (name === 'book') return '#/book';
     return '#/';
   }

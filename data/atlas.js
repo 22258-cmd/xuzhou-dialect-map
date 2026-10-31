@@ -281,7 +281,7 @@ window.ATLAS = {
     { id: 'zoume',   w: '揍么',   py: 'zòu me',      meaning: '干什么',             example: '你揍么去？这么急。',        cat: 'changyong', difficulty: 1, levelId: 1, districtId: 'fengxian', spotId: 'fengxian' },
     { id: 'nen',     w: '恁',     py: 'nèn',         meaning: '你们；那么',         example: '恁都来了？快坐。',          cat: 'changyong', difficulty: 2, levelId: 2, districtId: 'peixian', spotId: 'peixian' },
     { id: 'an',      w: '俺',     py: 'ǎn',          meaning: '我、我们',           example: '俺家就在这条街上。',        cat: 'changyong', difficulty: 1, levelId: 1, districtId: 'tongshan', spotId: 'map3d' },
-    { id: 'guada',   w: '呱嗒',   py: 'guā da',      meaning: '说话、闲聊',         example: '他俩在门口呱嗒半天了。',    cat: 'lagua', difficulty: 3, levelId: 0, districtId: 'quanshan', spotId: 'yanchuan' },
+    { id: 'guada',   w: '呱嗒',   py: 'guā da',      meaning: '说话、闲聊',         example: '他俩在门口呱嗒半天了。',    cat: 'lagua', difficulty: 3, levelId: 0, districtId: 'quanshan', spotId: 'yanchuan', unlockOnVisit: true },
     { id: 'xihan',   w: '稀罕',   py: 'xī han',      meaning: '喜欢、疼爱',         example: '奶奶最稀罕这小孙子。',      cat: 'shenghuo', difficulty: 2, levelId: 2, districtId: 'suining', spotId: 'tongyao' },
     { id: 'bandiaozi', w: '半吊子', py: 'bàn diào zi', meaning: '缺心眼、不靠谱',   example: '他是个半吊子，别指望他。',  cat: 'liyu', difficulty: 4, levelId: 4, districtId: 'pizhou', spotId: 'pizhou' },
     { id: 'babuneng',w: '巴不能', py: 'bā bu néng',  meaning: '巴不得',             example: '巴不能早点下班回家。',      cat: 'liyu', difficulty: 3, levelId: 3, districtId: 'yunlong', spotId: null },

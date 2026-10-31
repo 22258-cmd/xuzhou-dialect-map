@@ -1,0 +1,52 @@
+/* ============================================================
+   features/scene.css — 拉呱场景样式（最小集）
+   复用 quiz 的 .stage / .stage-inner / .q-close / .q-btn 骨架，
+   这里只补对话气泡、选项、结算三块。
+   ============================================================ */
+
+.sc-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.sc-head-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.sc-head-txt b { font-family: var(--serif, serif); font-size: 16px; }
+.sc-head-txt span { font-size: 11px; opacity: .6; letter-spacing: .04em; }
+.sc-score { font-size: 18px; font-variant-numeric: tabular-nums; }
+.sc-score small { display: block; font-size: 9px; opacity: .55; letter-spacing: .1em; text-align: right; }
+
+.sc-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.sc-npc { display: flex; gap: 10px; align-items: flex-start; }
+.sc-avatar {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(193, 80, 58, .18); border: 1px solid rgba(193, 80, 58, .5);
+  font-family: var(--serif, serif); font-size: 14px;
+}
+.sc-say b { display: block; font-family: var(--serif, serif); font-size: 15px; line-height: 1.6; }
+.sc-say i { display: block; font-style: normal; font-size: 11px; opacity: .55; margin-top: 4px; }
+
+.sc-opts { display: flex; flex-direction: column; gap: 8px; }
+.sc-opt {
+  text-align: left; padding: 11px 13px; border-radius: 10px;
+  background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1);
+  color: inherit; font: inherit; cursor: pointer;
+  transition: background .18s, border-color .18s;
+}
+.sc-opt:hover:not(:disabled) { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .24); }
+.sc-opt:focus-visible { outline: 2px solid var(--gold, #e8c07a); outline-offset: 2px; }
+.sc-opt:disabled { opacity: .42; cursor: default; }
+
+.sc-reply { padding: 0; }
+.sc-reply b { display: block; font-family: var(--serif, serif); font-size: 14px; line-height: 1.65; }
+.sc-reply i { display: block; font-style: normal; font-size: 11px; opacity: .55; margin-top: 4px; }
+.sc-next { margin-top: 12px; }
+
+.sc-done { padding: 40px 20px; text-align: center; }
+.sc-eyebrow { font-size: 10.5px; letter-spacing: .16em; opacity: .6; }
+.sc-big { font-family: var(--serif, serif); font-size: 56px; line-height: 1.1; margin: 8px 0 4px; }
+.sc-meta { font-size: 12px; opacity: .7; margin-bottom: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-opt { transition: none; }
+}

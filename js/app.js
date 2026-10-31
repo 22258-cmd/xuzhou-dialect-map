@@ -57,6 +57,7 @@
   });
 
   const DISTRICTS = ATLAS.districts;
+  const SCENES = ATLAS.scenes || [];
 
   const WORDS = ATLAS.words.map(function (w) {
     const d = SEL.district(w.districtId);
@@ -307,12 +308,18 @@
     el.className = 'pin';
     el.style.setProperty('--c', color);
     el.dataset.id = s.id;
+    /* 它是画布上的**装饰标记**，不是控件：CSS 里 pointer-events:none，
+       所以既不能点也没有键盘语义。此前它仍是 <button>（tabIndex 0），
+       于是键盘 Tab 能停上去、回车却什么都不发生。真正可达的入口是底部队县条、
+       搜索框与面板里的按钮 —— 这里明确标成装饰，别给键盘用户一个假入口。 */
+    el.tabIndex = -1;
+    el.setAttribute('aria-hidden', 'true');
     el.innerHTML =
       '<span class="pin-inner">' +
       '<span class="pin-halo"></span>' +
       '<span class="pin-dot"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">' +
       (CAT_ICON[s.category] || '') + '</svg></span>' +
-      '<span class="pin-tip">' + s.name + ' <b>' + s.word + '</b></span>' +
+      '<span class="pin-tip">' + esc(s.name) + ' <b>' + esc(s.word) + '</b></span>' +
       '</span>';
     pinLayer.appendChild(el);
 
@@ -380,7 +387,8 @@
   }
 
   /* ---------------------- 自动旋转 ---------------------- */
-  let autoMode = 'sway';
+  /* 动效敏感用户不要一进来就被自动摇摆推着走（CSS 侧还有一条 prefers-reduced-motion 关掉脉动） */
+  let autoMode = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'sway';
   let swayPhase = 0;
   let baseTheta = 0;
   let lastInteract = 0;
@@ -585,6 +593,36 @@
     selectDistrict(null);
   });
 
+  /**
+   * 「拉呱」入口。
+   *
+   * 为什么必须有：`data/atlas.js` 的 3 场对话树（早点摊儿 / 街上问路 / 姥姥家吃饭）
+   * 带着全部台词、拼音、分数与 `unlock` 字段，但运行时此前既没有场景播放器、
+   * 也没有任何指向 `#/scene/*` 的入口 —— 6 个「拉呱专属」词条因此永远拿不到，
+   * 而 `tools/audit-reachability.cjs` 只检测通路是否存在，检测不出"用户走不到"。
+   * 所以入口和守卫要一起装。
+   */
+  function sceneSection(did) {
+    const list = SCENES.filter(function (sc) { return sc.districtId === did; });
+    if (!list.length) return '';
+    return '<div class="p-sec"><h3>拉呱</h3>' + list.map(function (sc) {
+      const done = SEL.isSceneDone(sc.id);
+      return '<button class="quiz-entry" data-scene="' + esc(sc.id) + '">' +
+        '<span class="qe-ic">' + (done ? '✓' : '▶') + '</span>' +
+        '<span class="qe-txt"><b>' + esc(sc.name) + '</b>' +
+        '<i>' + esc(sc.place) + ' · ' + Object.keys(sc.nodes).length + ' 轮对话 · ' +
+        (done ? '聊过了' : '跟着话头往下接') + '</i></span>' +
+        '<span class="qe-go">' + (done ? '再聊' : '开聊') + ' ›</span>' +
+        '</button>';
+    }).join('') + '</div>';
+  }
+
+  function wireSceneEntries() {
+    $$('[data-scene]', panelBody).forEach(function (b) {
+      b.addEventListener('click', function () { ROUTER.go('scene', b.dataset.scene); });
+    });
+  }
+
   function renderDistrictPanel(name) {
     const d = districtByName[name];
     const rec = districtMap[name];
@@ -596,28 +634,30 @@
     spots.forEach(function (s) {
       const done = explored.has(s.id);
       rows +=
-        '<div class="spot-row" data-spot="' + s.id + '">' +
-        '<img src="' + s.thumb + '" alt="">' +
+        '<div class="spot-row" data-spot="' + esc(s.id) + '">' +
+        '<img src="' + esc(s.thumb) + '" alt="">' +
         '<div style="min-width:0">' +
-        '<div class="sr-t">' + s.name + (done ? ' ✓' : '') + '</div>' +
-        '<div class="sr-s">' + s.tag + '</div></div>' +
-        '<span class="sr-c" style="color:' + CAT_COLOR[s.category] + '">' + s.category + '</span>' +
+        '<div class="sr-t">' + esc(s.name) + (done ? ' ✓' : '') + '</div>' +
+        '<div class="sr-s">' + esc(s.tag) + '</div></div>' +
+        '<span class="sr-c" style="color:' + (CAT_COLOR[s.category] || '#e8b54b') + '">' + esc(s.category) + '</span>' +
         '</div>';
     });
 
     panelBody.innerHTML =
       '<div class="p-hero">' +
-      '<img src="' + cover + '" alt="">' +
-      '<div class="p-hero-badge" style="--c:#e8b54b">' + d.type + '</div>' +
-      '<div class="p-hero-title"><h2>' + d.name + '</h2>' +
-      '<div class="meta" style="--c:#e8b54b">' + d.note + ' · ' + spots.length + ' 处方言点</div></div>' +
+      '<img src="' + esc(cover) + '" alt="">' +
+      '<div class="p-hero-badge" style="--c:#e8b54b">' + esc(d.type) + '</div>' +
+      '<div class="p-hero-title"><h2>' + esc(d.name) + '</h2>' +
+      '<div class="meta" style="--c:#e8b54b">' + esc(d.note) + ' · ' + spots.length + ' 处方言点</div></div>' +
       '</div>' +
-      '<div class="p-sec"><h3>区县速写</h3><p class="p-desc">' + d.intro + '</p></div>' +
-      '<div class="p-sec"><h3>方言点</h3>' + rows + '</div>';
+      '<div class="p-sec"><h3>区县速写</h3><p class="p-desc">' + esc(d.intro) + '</p></div>' +
+      '<div class="p-sec"><h3>方言点</h3>' + rows + '</div>' +
+      sceneSection(d.id);
 
     $$('.spot-row', panelBody).forEach(function (r) {
       r.addEventListener('click', function () { openSpot(r.dataset.spot, true); });
     });
+    wireSceneEntries();
     openPanel();
   }
 
@@ -639,7 +679,7 @@
       '<div class="p-sec"><h3>方言小游戏</h3>' +
       '<button class="quiz-entry" data-quiz="' + lv.id + '" data-state="' + st + '">' +
       '<span class="qe-ic">' + (lvDone ? '✓' : '▶') + '</span>' +
-      '<span class="qe-txt"><b>第 ' + lv.id + ' 关 · ' + lv.name + '</b>' +
+      '<span class="qe-txt"><b>第 ' + lv.id + ' 关 · ' + esc(lv.name) + '</b>' +
       '<i>' + lvWords.length + ' 个词条 · 听音辨义 · ' + ST_LABEL[st] + '</i></span>' +
       '<span class="qe-go">' + (lvDone ? '重玩' : '开始') + ' ›</span>' +
       '</button></div>'
@@ -647,24 +687,25 @@
 
     panelBody.innerHTML =
       '<div class="p-hero" style="--c:' + color + '">' +
-      '<img src="' + s.thumb + '" alt="">' +
-      '<div class="p-hero-badge" style="--c:' + color + '">' + s.category + '</div>' +
-      '<div class="p-hero-title"><h2>' + s.name + '</h2>' +
-      '<div class="meta" style="--c:' + color + '">' + d.name + ' · ' + s.tag + '</div></div>' +
+      '<img src="' + esc(s.thumb) + '" alt="">' +
+      '<div class="p-hero-badge" style="--c:' + color + '">' + esc(s.category) + '</div>' +
+      '<div class="p-hero-title"><h2>' + esc(s.name) + '</h2>' +
+      '<div class="meta" style="--c:' + color + '">' + esc(d.name) + ' · ' + esc(s.tag) + '</div></div>' +
       '</div>' +
       '<div class="p-sec"><h3>方言点介绍</h3>' +
-      '<p class="p-desc">' + s.desc + '</p>' +
-      '<div class="quote"><div class="q-w">' + s.word +
-      (pid ? '<span class="q-p">' + pid + '</span>' : '') +
-      '</div><div class="q-m">' + s.meaning + '</div></div>' +
+      '<p class="p-desc">' + esc(s.desc) + '</p>' +
+      '<div class="quote"><div class="q-w">' + esc(s.word) +
+      (pid ? '<span class="q-p">' + esc(pid) + '</span>' : '') +
+      '</div><div class="q-m">' + esc(s.meaning) + '</div></div>' +
       '</div>' +
       quizBlock +
+      sceneSection(s.districtId) +
       '<div class="p-sec"><h3>延伸阅读</h3>' +
-      '<a class="link-btn" href="' + s.link + '" target="_blank" rel="noopener">' +
-      '<span>' + s.linkLabel + '</span>' +
+      '<a class="link-btn" href="' + esc(safeUrl(s.link)) + '" target="_blank" rel="noopener">' +
+      '<span>' + esc(s.linkLabel) + '</span>' +
       '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>' +
       '</a>' +
-      '<button class="btn-ghost" data-jump="' + s.district + '">查看 ' + d.name + ' 全部方言点</button>' +
+      '<button class="btn-ghost" data-jump="' + esc(s.district) + '">查看 ' + esc(d.name) + ' 全部方言点</button>' +
       '</div>';
 
     $$('[data-jump]', panelBody).forEach(function (b) {
@@ -681,6 +722,8 @@
       });
     });
 
+    wireSceneEntries();
+
     openPanel();
   }
 
@@ -689,21 +732,22 @@
     const spots = SPOTS.filter(s => s.word === w.w);
     let link = '';
     spots.forEach(function (s) {
-      link += '<div class="spot-row" data-spot="' + s.id + '">' +
-        '<img src="' + s.thumb + '" alt="">' +
-        '<div style="min-width:0"><div class="sr-t">' + s.name + '</div>' +
-        '<div class="sr-s">' + s.district + ' · ' + s.tag + '</div></div></div>';
+      link += '<div class="spot-row" data-spot="' + esc(s.id) + '">' +
+        '<img src="' + esc(s.thumb) + '" alt="">' +
+        '<div style="min-width:0"><div class="sr-t">' + esc(s.name) + '</div>' +
+        '<div class="sr-s">' + esc(s.district) + ' · ' + esc(s.tag) + '</div></div></div>';
     });
 
     panelBody.innerHTML =
       '<div class="p-sec" style="padding-top:26px">' +
       '<h3>方言词</h3>' +
-      '<div class="q-word">' + w.w + '</div>' +
-      '<div class="q-py">' + (w.p || '') + '</div>' +
-      '<p class="p-desc" style="text-align:center">' + w.m + '</p>' +
+      '<div class="q-word">' + esc(w.w) + '</div>' +
+      '<div class="q-py">' + esc(w.p || '') + '</div>' +
+      '<p class="p-desc" style="text-align:center">' + esc(w.m) + '</p>' +
       '</div>' +
       '<div class="p-sec"><h3>例句</h3><div class="quote"><div class="q-m" style="margin-top:0;font-size:14px">' +
-      w.e.replace(/</g, '&lt;') + '</div></div>' +
+      /* 此前例句只替换了 `<`，`>` 与 `&` 与引号照样进 HTML —— 数据里一个 `<` 组合就能改写结构 */
+      esc(w.e) + '</div></div>' +
       '</div>' +
       (link ? '<div class="p-sec"><h3>相关方言点</h3>' + link + '</div>' : '');
 
@@ -811,7 +855,15 @@
   let matches = [];
   let activeIdx = -1;
 
-  function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]; }); }
+  function esc(s) { return String(s).replace(/[<>&"]/g, function (c) { return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]; }); }
+  /**
+   * href 只放行 http/https。
+   * 面板里的链接来自 `data/atlas.js` 的 `links[].url`，今天是我们自己写的，
+   * 但一旦开放词条贡献（哪怕只是本地覆盖文件），`javascript:` / `data:` 就会变成直接的执行通道。
+   */
+  function safeUrl(u) {
+    return /^https?:\/\//i.test(String(u || '')) ? String(u) : '#';
+  }
   function mark(text, q) {
     if (!q) return esc(text);
     const i = text.toLowerCase().indexOf(q.toLowerCase());
@@ -911,12 +963,13 @@
     if (e.key === '/' && document.activeElement !== input) {
       e.preventDefault(); input.focus();
     }
-    if (e.key === 'Escape') { closePanel(); selectDistrict(null); $('#modal').classList.remove('on'); }
+    if (e.key === 'Escape') { closePanel(); selectDistrict(null); closeModal(); }
   });
 
   /* ---------------------- 工具按钮 ---------------------- */
   const btnRotate = $('#btnRotate');
-  btnRotate.classList.add('on');
+  if (autoMode !== 'off') btnRotate.classList.add('on');
+  else btnRotate.dataset.tip = '自动旋转';
   btnRotate.addEventListener('click', function () {
     if (autoMode === 'sway') { autoMode = 'spin'; btnRotate.dataset.tip = '环绕旋转'; }
     else if (autoMode === 'spin') { autoMode = 'off'; btnRotate.classList.remove('on'); btnRotate.dataset.tip = '关闭旋转'; return; }
@@ -930,7 +983,11 @@
   const modal = $('#modal');
   const modalCard = $('#modalCard');
 
-  function closeModal() { modal.classList.remove('on'); }
+  function closeModal() {
+    modal.classList.remove('on');
+    // 图鉴是从 #/book 打开的，关掉就要把地址栏还回去，否则刷新会重新弹出一个"已关闭"的图鉴
+    if (ROUTER.parse(location.hash).name === 'book') ROUTER.replace('home');
+  }
   modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
   /* ---------- 小游戏入口（玩法由 features/quiz.js 独立承担） ---------- */
@@ -950,8 +1007,8 @@
     let html = '';
     items.forEach(function (i) {
       html += '<div class="bk' + (i.unlocked ? '' : ' lock') + '">' +
-        '<div class="bk-w">' + (i.unlocked ? i.w.w : '？？') + '</div>' +
-        '<div class="bk-p">' + (i.unlocked ? (i.w.p || '') : '未解锁') + '</div>' +
+        '<div class="bk-w">' + (i.unlocked ? esc(i.w.w) : '？？') + '</div>' +
+        '<div class="bk-p">' + (i.unlocked ? esc(i.w.p || '') : '未解锁') + '</div>' +
         '<div class="bk-m">' + (i.unlocked ? esc(i.w.m) : '闯关答对即可解锁') + '</div>' +
         '</div>';
     });
@@ -966,11 +1023,13 @@
     $$('[data-close]', modalCard).forEach(b => b.addEventListener('click', closeModal));
     modal.classList.add('on');
   }
-  $('#btnBook').addEventListener('click', openBook);
+  // 走路由而不是直接开弹窗：这样地址栏反映"正在看图鉴"，浏览器返回键也有意义
+  $('#btnBook').addEventListener('click', function () { ROUTER.go('book'); });
 
   /* ---------------------- 每帧 ---------------------- */
   const _v = new THREE.Vector3();
   let lastT = performance.now();
+  let rafId = 0;
   let introDone = false;
 
   function updateScreenPositions() {
@@ -998,7 +1057,7 @@
   }
 
   function animate(now) {
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
     const dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
 
@@ -1089,7 +1148,6 @@
 
   ROUTER.on('book', function () {
     openBook();
-    ROUTER.replace('home');
   });
 
   /* 搜索命中后在地图上闪一下，指明落在哪 */
@@ -1118,9 +1176,33 @@
   mapGroup.position.y = -14;
   mapGroup.scale.setScalar(0.94);
 
-  requestAnimationFrame(animate);
+  rafId = requestAnimationFrame(animate);
 
-  // 入场：先落图，再按当前 hash 派发路由
+  /* 后台标签页不该继续每帧重绘 WebGL：切走就停，切回来续。
+     lastT 必须重置，否则回来第一帧的 dt 会是「离开多久」那么长，缓动会跳一帧。 */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+    } else if (!rafId) {
+      lastT = performance.now();
+      rafId = requestAnimationFrame(animate);
+    }
+  });
+
+  // 入场：先落图，再按当前 hash 派发路由。
+  // 但派发**不能只挂在 rAF 上**：页面被后台化或被节流时 rAF 不触发，
+  // ROUTER.init() 就永远不跑，整个应用停在空白状态（实测 document.hidden 时
+  // 所有路由都不渲染、面板全空）。所以 init 做成幂等 + 一条时间兜底。
+  let routerStarted = false;
+  function startRouter() {
+    if (routerStarted) return;
+    routerStarted = true;
+    try { ROUTER.init(); } catch (err) { console.error(err); homeView(); }
+  }
+
+  // 入场动画只是视觉（地图落下 + 微缩放），**路由初始化不能挂在它后面**：
+  // rAF 在后台标签页里根本不触发，实测那样整个应用停在空白状态、所有 hash 都不生效。
   const t0 = performance.now();
   (function intro() {
     const p = Math.min(1, (performance.now() - t0) / 1500);
@@ -1128,11 +1210,10 @@
     mapGroup.position.y = -14 * (1 - e);
     mapGroup.scale.setScalar(0.94 + 0.06 * e);
     if (p < 1) requestAnimationFrame(intro);
-    else {
-      lastInteract = performance.now() + 800;
-      try { ROUTER.init(); } catch (err) { console.error(err); homeView(); }
-    }
+    else lastInteract = performance.now() + 800;
   })();
+
+  startRouter();
 
   setTimeout(function () { hideHint(); }, 9000);
 
