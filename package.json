@@ -1,0 +1,13 @@
+{
+  "name": "xuzhou-dialect-map",
+  "private": true,
+  "version": "0.0.0",
+  "description": "自检脚本用；运行本身不需要 node 依赖，也不需要构建",
+  "scripts": {
+    "audit": "node tools/audit-reachability.cjs",
+    "smoke": "node tools/smoke.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

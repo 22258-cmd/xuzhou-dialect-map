@@ -50,13 +50,25 @@
     if (!pool.length) return [];
     var all = A.words;
 
+    // 优先出没解锁过的词：图鉴收集是这个项目的主要动机，反复出已解锁的词等于原地空转。
+    // 两组各自洗牌（而不是把 fresh 整体排在前面），否则同一次里题序会按数据顺序泄露难度。
+    var fresh = shuffle(pool.filter(function (w) { return !sel.isWordUnlocked(w.id); }));
+    var repeat = shuffle(pool.filter(function (w) { return sel.isWordUnlocked(w.id); }));
+    var ordered = [];
+    for (var n = 0; n < Math.max(fresh.length, repeat.length); n++) {
+      if (n < fresh.length) ordered.push(fresh[n]);
+      if (n < repeat.length) ordered.push(repeat[n]);
+    }
+
     // 每关最多 6 题，词多的关卡随机抽取
-    return shuffle(pool.slice()).slice(0, 6).map(function (item) {
+    return ordered.slice(0, 6).map(function (item) {
       var sameCat = all.filter(function (w) { return w.id !== item.id && w.cat === item.cat; });
       var sameDiff = all.filter(function (w) { return w.id !== item.id && w.difficulty === item.difficulty; });
       var rest = all.filter(function (w) { return w.id !== item.id; });
 
-      var cand = sameCat.concat(sameDiff, rest);
+      // 三段都必须洗牌：以前只有最终 opts 洗，而**取哪三个干扰项**是按数据原序定的，
+      // 于是同一题的错误选项永远是同三个（背下来就能过）。
+      var cand = shuffle(sameCat).concat(shuffle(sameDiff), shuffle(rest));
       var picked = [], used = {};
       used[item.meaning] = 1;
 
@@ -280,6 +292,9 @@
 
     close: function () {
       if (!root) return;
+      // 没答完就退出 = 放弃：必须清掉 levels.active，否则那个区县会永久显示「进行中」
+      // （completeLevel 已经清过，所以这里只在"未到结算"时生效）
+      if (q && q.i < q.qs.length) act.abandonLevel();
       root.className = 'stage';
       root.innerHTML = '';
       q = null;
@@ -299,6 +314,21 @@
 
   window.XZ = window.XZ || {};
   window.XZ.quiz = api;
+
+  /* 题卡上印着 A/B/C/D 键帽，此前却没有任何键盘监听 —— 键盘用户看得见提示却按不动。
+     现在 1-4 与 A-D 都能作答；只在答题界面打开时生效，不抢搜索框的输入。 */
+  document.addEventListener('keydown', function (e) {
+    if (!api.isOpen() || !q || q.locked) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var k = String(e.key || '').toLowerCase();
+    var idx = '1234'.indexOf(k);
+    if (idx < 0) idx = 'abcd'.indexOf(k);
+    if (idx < 0) return;
+    var btn = root.querySelectorAll('.q-opt')[idx];
+    if (!btn) return;
+    e.preventDefault();
+    answer(idx, btn);
+  });
 
   // 路由接管（脚本位于 body 末尾，DOM 已就绪，直接注册）
   window.XZ.router.on('quiz', function (param) {

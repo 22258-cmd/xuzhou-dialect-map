@@ -1,0 +1,167 @@
+#!/usr/bin/env node
+'use strict';
+/**
+ * tools/smoke.cjs —— 浏览器冒烟（Playwright）
+ *
+ * 覆盖审计报告里「只有真跑起来才知道」的那几类问题：
+ *   ① 5 个 hash 视图都能出 DOM
+ *   ② 全程 console.error / pageerror = 0
+ *   ③ 残缺存档不抛错，且历史脏档里的 levels.active 被清掉
+ *   ④ 进关→退出后，区县不再永久「进行中」
+ *   ⑤ 拉呱场景能走完、能解锁词条、能写 scenes.done
+ *   ⑥ 图鉴分母 = atlas 词条总数
+ *
+ * 依赖：npm i -D playwright && npx playwright install chromium
+ * 用法：node tools/smoke.cjs [--port=8711]
+ */
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+const portArg = process.argv.find((a) => a.startsWith('--port='));
+const PORT = Number(portArg ? portArg.split('=')[1] : 8711) || 8711;
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.json': 'application/json'
+};
+
+function serve() {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer((req, res) => {
+      const url = decodeURIComponent((req.url || '/').split('?')[0]);
+      const rel = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+      const file = path.resolve(ROOT, rel);
+      if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+        res.writeHead(404); res.end('404'); return;
+      }
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+      fs.createReadStream(file).pipe(res);
+    });
+    srv.on('error', reject);
+    srv.listen(PORT, '127.0.0.1', () => resolve(srv));
+  });
+}
+
+const fails = [];
+function check(name, ok, extra) {
+  if (!ok) fails.push(name + (extra ? ' :: ' + extra : ''));
+  console.log((ok ? 'PASS  ' : 'FAIL  ') + name + (extra && !ok ? '  :: ' + extra : ''));
+}
+
+(async () => {
+  let srv, browser;
+  try {
+    srv = await serve();
+  } catch (e) {
+    console.error('[smoke] 端口 ' + PORT + ' 起不来: ' + e.message);
+    process.exit(2);
+  }
+
+  const { chromium } = require('playwright');
+  browser = await chromium.launch();
+  const page = await browser.newPage();
+  const errors = [];
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+
+  const base = 'http://127.0.0.1:' + PORT + '/index.html';
+
+  /* ① 视图 */
+  for (const h of ['#/', '#/d/quanshan', '#/s/yanchuan', '#/w/guada', '#/quiz/2']) {
+    await page.goto(base + h, { waitUntil: 'load' });
+    await page.waitForTimeout(700);
+    const len = await page.evaluate(() => (document.body.innerText || '').trim().length);
+    check('视图非空 ' + h, len > 0, 'innerText 长度=' + len);
+  }
+
+  /* ② 控制台 */
+  check('无 console.error / pageerror', errors.length === 0, errors.slice(0, 3).join(' | '));
+
+  /* ③ 残缺存档 */
+  const saves = [
+    ['半截档·缺 seen', '{"version":2,"words":{"unlocked":["guan"]}}'],
+    ['类型错误·words 非对象', '{"version":2,"words":"x"}'],
+    ['类型错误·active 非数字', '{"version":2,"levels":{"active":"abc"}}'],
+    ['脏档·上次中途退出 active=2', '{"version":2,"levels":{"active":2}}'],
+    ['非法 JSON', '{"version":2,}']
+  ];
+  for (const [name, raw] of saves) {
+    errors.length = 0;
+    await page.goto(base, { waitUntil: 'load' });
+    await page.evaluate((v) => { try { localStorage.setItem('xzdt.v2', v); } catch (e) {} }, raw);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    const state = await page.evaluate(() => ({
+      boot: window.XZ && window.XZ.store && window.XZ.store.bootMode,
+      active: window.XZ && window.XZ.store.get().levels.active,
+      yunlong: window.XZ && window.XZ.selectors.districtState('yunlong')
+    }));
+    check('残缺存档不抛错 · ' + name,
+      errors.length === 0 && !!state.boot, errors[0] || ('boot=' + state.boot));
+    check('脏 active 被清 · ' + name,
+      state.active === 0 && state.yunlong !== 'playing',
+      'active=' + state.active + ' yunlong=' + state.yunlong);
+  }
+
+  /* ④ 进关 → 退出 */
+  await page.goto(base + '#/quiz/2', { waitUntil: 'load' });
+  await page.waitForTimeout(700);
+  const opened = await page.$('.q-close');
+  if (opened) {
+    await opened.click();
+    await page.waitForTimeout(600);
+  }
+  const after = await page.evaluate(() => ({
+    active: window.XZ.store.get().levels.active,
+    yunlong: window.XZ.selectors.districtState('yunlong')
+  }));
+  check('退出答题后不残留 playing',
+    after.active === 0 && after.yunlong !== 'playing',
+    'active=' + after.active + ' yunlong=' + after.yunlong);
+
+  /* ⑤ 拉呱场景端到端 */
+  await page.goto(base + '#/scene/zaodian', { waitUntil: 'load' });
+  await page.waitForTimeout(700);
+  let hasScene = await page.$('.sc-opt');
+  if (!hasScene) {
+    check('场景路由可进入 #/scene/zaodian', false, '没有 .sc-opt，检查 features/scene.js 是否已引入且 router 有 scene 分支');
+  } else {
+    check('场景路由可进入 #/scene/zaodian', true);
+    for (let i = 0; i < 12; i++) {
+      if (await page.$('.sc-done')) break;
+      const opt = await page.$('.sc-opt:not([disabled])');
+      if (opt) { await opt.click(); await page.waitForTimeout(150); }
+      const nx = await page.$('.sc-next');
+      if (nx) { await nx.click(); await page.waitForTimeout(150); }
+    }
+    const done = await page.evaluate(() => {
+      var S = window.XZ.store.get();
+      return {
+        sceneDone: (S.scenes.done || []).indexOf('zaodian') >= 0,
+        unlocked: window.XZ.selectors.bookProgress().unlocked,
+        total: window.XZ.selectors.bookProgress().total
+      };
+    });
+    check('场景走完并写入 scenes.done', done.sceneDone);
+    check('场景解锁了词条', done.unlocked > 0, 'unlocked=' + done.unlocked);
+    check('图鉴分母 = 词条总数', done.total === 54, 'total=' + done.total);
+  }
+
+  await browser.close();
+  srv.close();
+
+  console.log('\n' + (fails.length
+    ? '[smoke] FAIL —— ' + fails.length + ' 项未通过'
+    : '[smoke] OK —— 全部断言通过'));
+  process.exit(fails.length ? 1 : 0);
+})().catch((e) => {
+  console.error('[smoke] 崩了: ' + (e && e.stack || e));
+  process.exit(2);
+});

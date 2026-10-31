@@ -1,0 +1,29 @@
+name: smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  reachability:
+    name: 词条可达性（静态，无依赖）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # 数据里存在、代码里没实现的解锁通路，这一步会直接红
+      - run: node tools/audit-reachability.cjs
+
+  browser:
+    name: 浏览器冒烟（Playwright）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund   # 版本以 package.json 为准，别在这里另钉一个
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/smoke.cjs
